@@ -25,12 +25,23 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (e.g., server-to-server or curl)
+    // Debug: show incoming Origin header so we can verify what the browser is sending
+    // (This will appear in Render logs). Example: https://your-app.vercel.app
+    if (origin) console.debug('Incoming request Origin:', origin);
+
+    // allow requests with no origin (server-to-server, curl)
     if (!origin) return callback(null, true);
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
     }
-    return callback(new Error('CORS policy: origin not allowed'));
+
+    // Do NOT throw an Error here. Returning `callback(null, false)` will simply
+    // prevent CORS headers from being set. The browser will block the request
+    // client-side, but the server won't log a stack trace for normal cross-origin
+    // attempts (reduces noisy logs). We still log a warning to help debugging.
+    console.warn('CORS: origin not allowed:', origin);
+    return callback(null, false);
   }
 }));
 app.use(express.json({ limit: '1mb' }));
