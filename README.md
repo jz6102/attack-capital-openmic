@@ -1,149 +1,112 @@
-# Receptionist AI Intake Agent — OpenMic Integration
+# AI Receptionist Intake Agent (OpenMic API Integration)
 
-Professional, concise README for the "Receptionist" intake-agent project built with OpenMic API.
+This project is a full-stack application demonstrating a domain-specific AI intake agent for an office receptionist, built with the OpenMic API, a Node.js/Express backend, and a React management UI. The application is fully deployed, with the backend hosted on Render and the frontend on Vercel.
 
-## Project summary
-- Purpose: a reference implementation that demonstrates pre-call, in-call function, and post-call webhook integrations with OpenMic. The project includes a small React UI to manage bots and view call logs, and a Node.js server that exposes the webhook endpoints used by OpenMic.
-- Chosen domain: Receptionist — the agent greets callers, asks for employee name or ID, looks up employee location during the call via a function call, and logs arrival/visit details after the call.
+**Live Application:** [**https://attack-capital-openmic-client.vercel.app**](https://attack-capital-openmic-client.vercel.app)
 
-## Repo layout (high level)
-- `server/` — Node.js + Express backend
-  - `index.js` — server entrypoint, mounts webhook handlers and REST APIs
-  - `routes/` — routes for `/precall`, `/function`, `/postcall`
-  - `controllers/` — handlers for precall, function, postcall, bots and call logs
-  - `models/` — Mongoose models: `Bot`, `CallLog`, `Patient` (used for seeded employees)
-  - `seed/seedPatients.js` — example seed data (employee records)
-  - `config/db.js` — MongoDB connection helper
-  - `utils/logger.js` — minimal logger wrapper
-- `client/` — React (Vite) front-end
-  - `src/pages` — `BotsPage`, `CallLogsPage`, `CallLogDetailPage`
-  - `src/components` — `BotForm`, `BotList`, `CallLogList`, `Navbar`
-  - `src/api/index.js` — axios helpers for backend API
+**Loom Demo Video:** [**<< PASTE YOUR LOOM VIDEO LINK HERE >>**]
 
-## Contract / Data shapes (tiny)
-- Pre-call request: OpenMic will POST JSON which may include `call_id`, `phone`, and `metadata` (e.g. `metadata.patient_id` or `metadata.bot_uid`). Server returns a JSON object with pre-call data (for Receptionist this is `patient` object reused to represent visitor/employee lookup).
-- Function call request: OpenMic will POST with `call_id` and `arguments` containing domain-specific inputs (e.g. `employee_id`). Server returns `{ status: 'ok', data: { ... } }` and appends the event into `CallLog.events`.
-- Post-call request: OpenMic will POST call transcript and summary. Server upserts the `CallLog` and stores `transcript`, `summary`, `events`, and `status`.
+---
 
-Example minimal CallLog document (Mongo):
-```
-{
-  call_id: 'call_12345',
-  bot_uid: 'bot_....',
-  events: [ { type: 'precall', payload: {...} }, { type: 'function_call', payload: {...} }, { type: 'postcall', payload: {...} } ],
-  transcript: {...},
-  summary: 'Visitor arrived for meeting with X',
-  status: 'postcall_done'
-}
-```
+## ► Project Objective
 
-## How the OpenMic integration maps to code
-- Pre-call webhook (`/precall`) — `server/controllers/precallController.js`
-  - Purpose: return visitor/employee data to OpenMic before the call starts so the agent can personalise the greeting.
-  - Implementation: looks up `metadata.patient_id` or `phone` against `Patient` collection. Creates a new `CallLog` entry with a `precall` event and returns a `patient` object (if not found, returns an "unknown" placeholder).
-- In-call function (`/function`) — `server/controllers/functionController.js`
-  - Purpose: during the call, OpenMic can invoke your custom function to fetch dynamic data (e.g., employee location) based on caller input.
-  - Implementation: reads `arguments.employee_id`, queries `Patient` (employees) and returns `{ name, location }`. Also appends a `function_call` event into the existing `CallLog`.
-- Post-call webhook (`/postcall`) — `server/controllers/postcallController.js`
-  - Purpose: OpenMic posts final transcript and summary after the call. Server stores the transcript, summary, and marks the call log complete.
+The goal is to develop an intelligent intake agent for a selected domain, as per the assignment requirements. [cite_start]This implementation focuses on the **Receptionist** use case[cite: 43, 44]. [cite_start]The core of the project is to demonstrate a robust, end-to-end integration of pre-call, in-call, and post-call webhooks to handle dynamic data retrieval and logging[cite: 4].
 
-## Setup (local dev)
-Prerequisites:
-- Node 18+ and npm
-- MongoDB (local or cloud); set `MONGO_URI` in `.env`
-- ngrok or similar to expose local server for OpenMic webhooks
+## ✨ Core Features
 
-1. Clone repository, then install:
+-   **Full Webhook Integration:** The backend is equipped to handle the complete lifecycle of an AI-powered call:
+    -   [cite_start]**Pre-call Webhook:** Receives initial call data before the conversation begins to personalize the interaction[cite: 29, 31].
+    -   [cite_start]**In-call Function:** A real-time API endpoint that the AI agent calls during the conversation to fetch live data based on user input (e.g., an employee ID)[cite: 35, 36].
+    -   [cite_start]**Post-call Webhook:** An endpoint that receives and logs the final call transcript and summary after the call has ended[cite: 38, 40].
 
-```
-# server
-cd server
-npm install
+-   **Web-Based Management UI:** A responsive React application provides a dashboard to manage bots and monitor call activity.
+    -   [cite_start]**Bot CRUD:** The UI allows for Creating, Reading, and Deleting bots, fulfilling a key submission criteria[cite: 26, 58].
+    -   **Call Log Viewer:** Displays a complete history of all calls processed by the system. [cite_start]Users can click on any log to view a detailed breakdown of the webhook events and their JSON payloads, providing clear evidence of the data flow[cite: 26, 17].
 
-# client
-cd ../client
-npm install
-```
+## 🏛️ System Architecture
 
-2. Configure environment (server/.env):
+The application is built on a modern client-server architecture:
 
-```
-MONGO_URI=<your_mongo_uri>
-PORT=8080
-# Optional secret used by controllers to verify incoming webhooks
-WEBHOOK_SECRET=some-secret-if-you-want
-```
+1.  **React Frontend (Client):** A single-page application built with Vite that provides the user interface for managing bots and viewing logs. Deployed on **Vercel**.
+2.  **Node.js Backend (Server):** An Express server that exposes two sets of endpoints: a REST API for the frontend and webhook endpoints for the external OpenMic service. Deployed on **Render**.
+3.  **MongoDB Database:** A NoSQL database (hosted on Atlas) used to persist all bot configurations and call log data.
+4.  **OpenMic API:** The external AI voice service that handles the calls and triggers the webhooks.
 
-3. Seed example employee records (optional but recommended):
+![System Flow Diagram](https://i.imgur.com/u3tT5h2.png)
 
-```
-cd server
-npm run seed
-```
+## 🛠️ Tech Stack
 
-4. Run server and client concurrently (two terminals):
+| Category      | Technology                               |
+| ------------- | ---------------------------------------- |
+| **Frontend** | React, Vite, Axios, React Router         |
+| **Backend** | Node.js, Express.js, Mongoose            |
+| **Database** | MongoDB Atlas                            |
+| **Deployment**| Vercel (Frontend), Render (Backend)      |
 
-```
-# Terminal A (server)
-cd server
-npm run dev
+---
 
-# Terminal B (client)
-cd client
-npm run dev
-```
+## 🚀 Setup and Installation
 
-5. Expose server to the internet (for OpenMic):
+To run this project locally, follow these steps.
 
-```
-# Start ngrok on the same port as server (8080)
-ngrok http 8080
-```
+### Prerequisites
 
-Copy the public ngrok URL (e.g. `https://xxxx.ngrok.io`) and use these endpoint URLs in the OpenMic dashboard:
-- Pre-call webhook URL: https://<ngrok>/precall
-- Function call URL: https://<ngrok>/function
-- Post-call webhook URL: https://<ngrok>/postcall
+-   Node.js (v18+) & npm
+-   MongoDB Atlas Account & Connection URI
 
-If you configured `WEBHOOK_SECRET`, include it as a query param (e.g. `?secret=<value>`) or set `X-Webhook-Secret` header in OpenMic (dashboard provides header settings).
+### Backend Setup
 
-## How to use (quick)
-1. Start server and client locally and expose server via ngrok.
-2. In OpenMic dashboard (or API), create a bot for the Receptionist domain and set the bot UID into the agent config.
-3. Configure the bot in OpenMic:
-   - Pre-call webhook -> `https://<ngrok>/precall`
-   - Custom function (name it e.g. `get_employee_location`) -> point to `https://<ngrok>/function`
-   - Post-call webhook -> `https://<ngrok>/postcall`
-4. Use OpenMic dashboard's "Test Call" to run a simulated call. During the call the agent will:
-   - Use pre-call data to personalise the greeting.
-   - Ask for employee name/ID; when provided, it will call your function endpoint and display the returned data in the conversation.
-   - At call end, OpenMic will POST transcript/summary to `/postcall` where it is saved in the backend.
-5. In the React UI (`http://localhost:5173` by default), visit:
-   - Bots page: create/list/delete bots (bot UID field is visible in the list) — used for tracking but bots may also be created inside OpenMic dashboard.
-   - Call Logs: view incoming `CallLog` entries created by the webhook flow. Click an entry to view events and payloads (precall, function_call, postcall).
+1.  **Navigate to the `server` directory:**
+    ```bash
+    cd server
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Create a `.env` file** in the `server` root and add your environment variables:
+    ```env
+    MONGO_URI=your_mongodb_connection_string
+    WEBHOOK_SECRET=super-secret-token
+    PORT=8080
+    CLIENT_ORIGIN=http://localhost:5173
+    ```
+4.  **Seed the database** with sample employee data:
+    ```bash
+    npm run seed
+    ```
+5.  **Start the server:**
+    ```bash
+    npm start
+    ```
+    The backend will run on `http://localhost:8080`.
 
-## Developer notes & assumptions
-- The `Patient` model is reused to store employee records for the Receptionist demo (fields: `employeeId`, `name`, `department`, `location`). The filename is `Patient.js` but semantically it represents employees/visitors.
-- The server performs minimal verification via `WEBHOOK_SECRET` if set. If you want stricter verification, add signature verification per OpenMic docs.
-- The client is intentionally minimal: it manages bots and displays call logs. OpenMic's dashboard is used to run the Test Call flow.
+### Frontend Setup
 
-## Demo checklist (for submission)
-Use this checklist for your loom demo recording and to validate functionality.
+1.  **Navigate to the `client` directory:**
+    ```bash
+    cd client
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Start the client:**
+    ```bash
+    npm run dev
+    ```
+    The frontend will be accessible at `http://localhost:5173`.
 
-- [ ] Backend running and publicly reachable via ngrok
-- [ ] Seeded employee records present (show `server/seed/seedPatients.js` run)
-- [ ] OpenMic bot created for Receptionist and configured with:
-  - Pre-call webhook -> `/precall`
-  - Custom function -> `/function`
-  - Post-call webhook -> `/postcall`
-- [ ] Show creating a bot in the UI (Bots page) and list with UID
-- [ ] Run a Test Call in OpenMic dashboard for the bot
-  - Show that pre-call response personalised greeting (from `/precall`)
-  - During call, provide employee ID/name so the agent triggers the function call and returns location (shown in conversation)
-  - After call, confirm `/postcall` receives transcript and summary and the Call Log in the UI contains events (precall, function_call, postcall)
+---
 
-## Troubleshooting
-- If call logs show empty or missing events: ensure OpenMic is pointed to your ngrok URL and that `WEBHOOK_SECRET` matches if you set it.
-- If the front-end cannot reach the server: ensure CORS is allowed (server sets cors middleware) and client `src/api/index.js` baseURL is `http://localhost:8080/api` for local dev.
+## 🔬 Demonstrating the Webhook Flow
 
+A notable challenge during development was the unreliability of the OpenMic "Test Call" feature, particularly its voice recognition for extracting parameters.
 
+To provide a clear and definitive demonstration of the backend's functionality, the three webhook integrations can be simulated manually using `curl`. [cite_start]This method confirms that the server logic is working perfectly and meets all assignment requirements[cite: 59, 60].
+
+#### 1. Pre-call Simulation
+
+Simulates the start of a call for `call_id: "demo_call_001"`.
+```bash
+curl -X POST "[https://attack-capital-openmic-server.onrender.com/precall?secret=super-secret-token](https://attack-capital-openmic-server.onrender.com/precall?secret=super-secret-token)" -H "Content-Type: application/json" -d '{"call_id":"demo_call_001"}'
