@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // The base URL of your backend server
-const API = axios.create({ baseURL: 'https://attack-capital-openmic-server.onrender.com/' });
+const API = axios.create({ baseURL: 'https://attack-capital-openmic-server.onrender.com/api' });
 
 // Bot API calls
 export const fetchBots = () => API.get('/bots');
