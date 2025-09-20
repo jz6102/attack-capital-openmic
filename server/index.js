@@ -15,8 +15,23 @@ const app = express();
 
 // Basic middlewares
 app.use(helmet());
+// CORS: allow the deployed client and localhost for development.
+// Note: the origin value must include the scheme (https://) to match the browser's Origin header.
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN || 'https://attack-capital-openmic-client-bbq6qz727-jaikanna-bs-projects.vercel.app',
+  'http://localhost:5173', // common Vite dev port
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: "attack-capital-openmic-client-bbq6qz727-jaikanna-bs-projects.vercel.app" 
+  origin: function (origin, callback) {
+    // allow requests with no origin (e.g., server-to-server or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS policy: origin not allowed'));
+  }
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
